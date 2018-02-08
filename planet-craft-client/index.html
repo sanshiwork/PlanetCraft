@@ -2,48 +2,127 @@
 <html>
 <head>
     <title>Game with WebSocket Demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body {
+            color: #000;
+            font-family: monospace;
+            font-size: 13px;
+            text-align: center;
+            font-weight: bold;
+
+            background-color: #fff;
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
 </head>
 
 <body>
-<input id="text" type="text"/>
-<button onclick="send()">Send</button>
-<div id="message">
+<div id="container">
 </div>
-
-</body>
-
+<script src="libs/three.min.js"></script>
 <script type="text/javascript">
-    // 连接服务器
-    var ws = new WebSocket("ws://localhost:8080/planet/craft/socket");
 
-    //连接发生错误的回调方法
-    ws.onerror = function () {
+    var camera, scene, renderer;
 
-    };
+    var box = [];
+    var rayCaster = new THREE.Raycaster();
+    var mouse = new THREE.Vector2();
 
-    //连接成功建立的回调方法
-    ws.onopen = function (event) {
+    init();
+    animate();
 
-    };
+    function init() {
+        // 相机
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.set(100, 200, 100);
+        camera.lookAt(new THREE.Vector3(100, 0, 100));
 
-    //接收到消息的回调方法
-    ws.onmessage = function (event) {
-        document.getElementById('message').innerHTML += event.data + '<br/>';
-    };
+        // 场景
+        scene = new THREE.Scene();
 
-    //连接关闭的回调方法
-    ws.onclose = function () {
+        // 辅助线
+        // scene.add(new THREE.AxisHelper(20));
 
-    };
+        var light = new THREE.PointLight(0xffffff, 1);
+        light.position.set(0, 100, 50);
+        scene.add(light);
 
-    //监听窗口关闭事件，当窗口关闭时，主动去关闭websocket连接，防止连接还没断开就关闭窗口，server端会抛异常。
-    window.onbeforeunload = function () {
-        ws.close();
-    };
+        // 立方体
+        var geometry = new THREE.BoxGeometry(1, 1, 1);
+        for (var i = 0; i < 200; i++) {
+            for (var j = 0; j < 200; j++) {
+                if (box[i] === undefined) {
+                    box[i] = [];
+                }
+                var material = new THREE.MeshLambertMaterial({color: 0xffffff - 0xffff * (i + j)});
+                box[i][j] = new THREE.Mesh(geometry, material);
+                box[i][j].position.set(i, 0, j);
+                scene.add(box[i][j]);
+            }
+        }
 
-    function send() {
-        var message = document.getElementById('text').value;
-        ws.send(message);
+
+        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setClearColor(0xeeeeee);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        var container = document.getElementById('container');
+        container.appendChild(renderer.domElement);
+
+        // 在容器上注册事件，这里container也可以换成document
+        container.addEventListener('mousedown', onMouseDown, false);
+
+        window.addEventListener('resize', onWindowResize, false);
+
+    }
+
+    function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+    }
+
+    function onMouseDown(event) {
+
+        mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+        mouse.y = -( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+
+        rayCaster.setFromCamera(mouse, camera);
+
+        var intersects = rayCaster.intersectObject(box[0][0]);
+
+        if (intersects.length > 0) {
+
+            // 点击立方体时，将立方体变为红色
+            box[0][0].material.color.setHex(0xff0000);
+
+        } else {
+
+            // 如果没有点击到，则将立方体变回绿色
+            box[0][0].material.color.setHex(0x00ff00);
+
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        render();
+
+    }
+
+    function render() {
+
+        renderer.render(scene, camera);
+
     }
 </script>
+<script src="libs/game.js"></script>
+</body>
 </html>
