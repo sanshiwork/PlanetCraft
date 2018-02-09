@@ -23,49 +23,57 @@
 <div id="container">
 </div>
 <script src="libs/three.min.js"></script>
+<script src="libs/stats.min.js"></script>
+<script src="libs/dat.gui.min.js"></script>
 <script type="text/javascript">
 
-    var camera, scene, renderer;
-
-    var box = [];
+    var camera, scene, renderer, stats;
+    var gui;
+    var controls = new function () {
+        this.color = 0x000000;
+    };
     var rayCaster = new THREE.Raycaster();
     var mouse = new THREE.Vector2();
 
+    initGui();
     init();
     animate();
+
+    function initGui() {
+        gui = new dat.GUI();
+        gui.addColor(controls, 'color').onChange(function (e) {
+            console.log(e);
+        });
+    }
 
     function init() {
         // 相机
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-        camera.position.set(100, 200, 100);
-        camera.lookAt(new THREE.Vector3(100, 0, 100));
+        camera.position.set(0, 2, 0);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
 
         // 场景
         scene = new THREE.Scene();
 
         // 辅助线
-        // scene.add(new THREE.AxisHelper(20));
+        // scene.add(new THREE.AxesHelper(20));
 
         var light = new THREE.PointLight(0xffffff, 1);
-        light.position.set(0, 100, 50);
+        light.position.set(0, 50, 0);
         scene.add(light);
 
-        // 立方体
-        var geometry = new THREE.BoxGeometry(1, 1, 1);
-        for (var i = 0; i < 200; i++) {
-            for (var j = 0; j < 200; j++) {
-                if (box[i] === undefined) {
-                    box[i] = [];
-                }
-                var material = new THREE.MeshLambertMaterial({color: 0xffffff - 0xffff * (i + j)});
-                box[i][j] = new THREE.Mesh(geometry, material);
-                box[i][j].position.set(i, 0, j);
-                scene.add(box[i][j]);
-            }
-        }
+        // 平面几何体
+        var geometry = new THREE.PlaneGeometry(20, 10, 512, 256);
+        geometry.rotateX(-Math.PI / 2);
 
+        var material = new THREE.MeshLambertMaterial({
+            vertexColors: THREE.FaceColors,
+            // wireframe: true,
+            // side: THREE.DoubleSide
+        });
+        scene.add(new THREE.Mesh(geometry, material));
 
-        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer = new THREE.WebGLRenderer();
         renderer.setClearColor(0xeeeeee);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -73,8 +81,11 @@
         var container = document.getElementById('container');
         container.appendChild(renderer.domElement);
 
+        stats = new Stats();
+        container.appendChild(stats.dom);
+
         // 在容器上注册事件，这里container也可以换成document
-        container.addEventListener('mousedown', onMouseDown, false);
+        container.addEventListener('click', onMouseDown, false);
 
         window.addEventListener('resize', onWindowResize, false);
 
@@ -96,31 +107,25 @@
 
         rayCaster.setFromCamera(mouse, camera);
 
-        var intersects = rayCaster.intersectObject(box[0][0]);
-
+        var intersects = rayCaster.intersectObjects(scene.children);
         if (intersects.length > 0) {
-
-            // 点击立方体时，将立方体变为红色
-            box[0][0].material.color.setHex(0xff0000);
-
-        } else {
-
-            // 如果没有点击到，则将立方体变回绿色
-            box[0][0].material.color.setHex(0x00ff00);
-
+            console.log(intersects[0]);
+            for (var i = 0; i < intersects[0].object.geometry.faces.length; i++) {
+                intersects[0].face.color.set(controls.color);
+                intersects[0].object.geometry.colorsNeedUpdate = true;
+            }
         }
     }
 
     function animate() {
         requestAnimationFrame(animate);
+        stats.update();
         render();
 
     }
 
     function render() {
-
         renderer.render(scene, camera);
-
     }
 </script>
 <script src="libs/game.js"></script>
