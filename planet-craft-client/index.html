@@ -30,7 +30,10 @@
     var camera, scene, renderer, stats;
     var gui;
     var controls = new function () {
-        this.color = 0x000000;
+        this.color = 0x00FF00;
+        this.y = 10;
+        this.x = 0;
+        this.z = 0;
     };
     var rayCaster = new THREE.Raycaster();
     var mouse = new THREE.Vector2();
@@ -44,12 +47,21 @@
         gui.addColor(controls, 'color').onChange(function (e) {
             console.log(e);
         });
+        gui.add(controls, 'x', -5, 5).onChange(function (e) {
+            camera.position.set(controls.x, controls.y, controls.z);
+        });
+        gui.add(controls, 'y', 1, 10).onChange(function (e) {
+            camera.position.set(controls.x, controls.y, controls.z);
+        });
+        gui.add(controls, 'z', -5, 5).onChange(function (e) {
+            camera.position.set(controls.x, controls.y, controls.z);
+        });
     }
 
     function init() {
         // 相机
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-        camera.position.set(0, 2, 0);
+        camera.position.set(0, controls.y, 0);
         camera.lookAt(new THREE.Vector3(0, 0, 0));
 
         // 场景
@@ -74,7 +86,7 @@
         scene.add(new THREE.Mesh(geometry, material));
 
         renderer = new THREE.WebGLRenderer();
-        renderer.setClearColor(0xeeeeee);
+        renderer.setClearColor(0x000020);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
 
