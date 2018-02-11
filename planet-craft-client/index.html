@@ -31,9 +31,16 @@
     var gui;
     var controls = new function () {
         this.color = 0x00FF00;
+        this.pencil = '0';
         this.y = 10;
         this.x = 0;
         this.z = 0;
+        this.reset = function () {
+            this.y = 10;
+            this.x = 0;
+            this.z = 0;
+            camera.position.set(controls.x, controls.y, controls.z);
+        }
     };
     var rayCaster = new THREE.Raycaster();
     var mouse = new THREE.Vector2();
@@ -44,18 +51,22 @@
 
     function initGui() {
         gui = new dat.GUI();
-        gui.addColor(controls, 'color').onChange(function (e) {
-            console.log(e);
-        });
-        gui.add(controls, 'x', -5, 5).onChange(function (e) {
+        var canvas = gui.addFolder("canvas");
+        canvas.addColor(controls, 'color');
+        canvas.add(controls, 'pencil', {square: '0', triangle: '1'});
+        var position = gui.addFolder("position");
+        position.add(controls, 'x', -8, 8).step(0.01).onChange(function (e) {
             camera.position.set(controls.x, controls.y, controls.z);
         });
-        gui.add(controls, 'y', 1, 10).onChange(function (e) {
+        position.add(controls, 'y', 2, 10).step(0.01).onChange(function (e) {
             camera.position.set(controls.x, controls.y, controls.z);
         });
-        gui.add(controls, 'z', -5, 5).onChange(function (e) {
+        position.add(controls, 'z', -4, 4).step(0.01).onChange(function (e) {
             camera.position.set(controls.x, controls.y, controls.z);
         });
+        position.add(controls, 'reset');
+
+
     }
 
     function init() {
@@ -121,11 +132,16 @@
 
         var intersects = rayCaster.intersectObjects(scene.children);
         if (intersects.length > 0) {
-            console.log(intersects[0]);
-            for (var i = 0; i < intersects[0].object.geometry.faces.length; i++) {
-                intersects[0].face.color.set(controls.color);
-                intersects[0].object.geometry.colorsNeedUpdate = true;
+            intersects[0].face.color.set(controls.color);
+            if (controls.pencil === '0') {
+                if (intersects[0].faceIndex % 2 === 0) {
+                    intersects[0].object.geometry.faces[intersects[0].faceIndex + 1].color.set(controls.color);
+                } else {
+                    intersects[0].object.geometry.faces[intersects[0].faceIndex - 1].color.set(controls.color);
+                }
             }
+            intersects[0].object.geometry.colorsNeedUpdate = true;
+
         }
     }
 
