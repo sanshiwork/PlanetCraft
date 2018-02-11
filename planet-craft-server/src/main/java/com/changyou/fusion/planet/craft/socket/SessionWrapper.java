@@ -11,6 +11,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class SessionWrapper {
 
+    private Enum status;
+
     private Session session;
 
     private Socket socket;
@@ -86,5 +88,23 @@ public class SessionWrapper {
      */
     public Queue<String> getOutputs() {
         return outputs;
+    }
+
+    /**
+     * Gets status.
+     *
+     * @return the status
+     */
+    public Enum getStatus() {
+        return status;
+    }
+
+    /**
+     * Sets status.
+     *
+     * @param status the status
+     */
+    public void setStatus(Enum status) {
+        this.status = status;
     }
 }

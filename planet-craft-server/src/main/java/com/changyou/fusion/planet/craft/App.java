@@ -25,7 +25,6 @@ public class App implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
-        // Executors.newScheduledThreadPool(1).scheduleAtFixedRate(tickService::tick, 0, 10, TimeUnit.MILLISECONDS);
         Executors.newScheduledThreadPool(1).scheduleAtFixedRate(tickService::tick, 0, 10, TimeUnit.MILLISECONDS);
     }
 }

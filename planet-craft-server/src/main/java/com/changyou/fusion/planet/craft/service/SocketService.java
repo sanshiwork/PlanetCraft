@@ -1,5 +1,6 @@
 package com.changyou.fusion.planet.craft.service;
 
+import com.changyou.fusion.planet.craft.domain.packet.Packet;
 import com.changyou.fusion.planet.craft.socket.SessionWrapper;
 
 import java.util.Map;
@@ -48,4 +49,11 @@ public interface SocketService {
      * @return sessions
      */
     public Map<String, SessionWrapper> sessions();
+
+    /**
+     * 广播消息
+     *
+     * @param packet packet
+     */
+    public void broadcast(Packet packet);
 }

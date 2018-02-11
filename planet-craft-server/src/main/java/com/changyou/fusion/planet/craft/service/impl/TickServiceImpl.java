@@ -1,7 +1,13 @@
 package com.changyou.fusion.planet.craft.service.impl;
 
+import com.changyou.fusion.planet.craft.domain.packet.Packet;
+import com.changyou.fusion.planet.craft.handler.Handler;
+import com.changyou.fusion.planet.craft.service.SceneService;
 import com.changyou.fusion.planet.craft.service.SocketService;
 import com.changyou.fusion.planet.craft.service.TickService;
+import com.changyou.fusion.planet.craft.socket.SessionStatus;
+import com.changyou.fusion.planet.craft.util.ApplicationContextProvider;
+import com.changyou.fusion.planet.craft.util.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +30,15 @@ public class TickServiceImpl implements TickService {
     @Autowired
     private SocketService socketService;
 
+    @Autowired
+    private SceneService sceneService;
+
     @Override
     public void tick() {
         long delta = System.currentTimeMillis() - time;
+
+        // 处理状态
+        tickStatus();
 
         // 处理所有输入
         tickInputs(10);
@@ -34,16 +46,44 @@ public class TickServiceImpl implements TickService {
         // 处理所有输出
         tickOutputs(100);
 
+        // TODO 定时存库
+
         time = System.currentTimeMillis();
+    }
+
+    private void tickStatus() {
+        socketService.sessions().forEach((s, sessionWrapper) -> {
+            if (sessionWrapper.getStatus() == SessionStatus.INIT) {
+                // 发送当前画布状态
+                Packet packet = new Packet();
+                packet.setId(Packet.INIT);
+                packet.setData(sceneService.getPlanetFaces());
+                sessionWrapper.getOutputs().add(JSON.toJson(packet));
+                sessionWrapper.setStatus(SessionStatus.WAITING);
+            }
+        });
     }
 
     private void tickInputs(int size) {
         socketService.sessions().forEach((s, sessionWrapper) -> {
+            if (sessionWrapper.getStatus() == SessionStatus.INIT) {
+                // 抛弃所有的消息包
+                sessionWrapper.getInputs().clear();
+                return;
+            }
+
             for (int i = 0; i < size; i++) {
                 String message = sessionWrapper.getInputs().poll();
                 if (message != null) {
-                    // 广播
-                    socketService.sessions().values().forEach(session -> session.getOutputs().add(message));
+                    Packet packet = JSON.fromJson(message, Packet.class);
+                    if (sessionWrapper.getStatus() == SessionStatus.WAITING && packet.getId() == Packet.INIT_ACK) {
+                        ((Handler) ApplicationContextProvider.getBean(Handler.HANDLER_PREFIX + packet.getId())).handle(sessionWrapper, packet.getId(), packet.getData().toString());
+                        break;
+                    }
+
+                    if (sessionWrapper.getStatus() == SessionStatus.CONNECTED) {
+                        ((Handler) ApplicationContextProvider.getBean(Handler.HANDLER_PREFIX + packet.getId())).handle(sessionWrapper, packet.getId(), packet.getData().toString());
+                    }
                 } else {
                     break;
                 }
@@ -57,7 +97,6 @@ public class TickServiceImpl implements TickService {
             for (int i = 0; i < size; i++) {
                 String message = sessionWrapper.getOutputs().poll();
                 if (message != null) {
-                    // 广播
                     try {
                         sessionWrapper.getSession().getBasicRemote().sendText(message);
                     } catch (IOException e) {
@@ -70,6 +109,4 @@ public class TickServiceImpl implements TickService {
             }
         });
     }
-
-
 }
