@@ -32,6 +32,7 @@ public class Socket {
      */
     @OnOpen
     public void onOpen(Session session) {
+        logger.info("Close Connection:{}", session.getId());
         socketService = ApplicationContextProvider.getBean(SocketService.class);
         factoryService = ApplicationContextProvider.getBean(FactoryService.class);
         uuid = session.getId();
@@ -43,10 +44,12 @@ public class Socket {
      */
     @OnClose
     public void onClose() {
+        logger.info("Close Connection:{}", uuid);
         socketService.disconnect(uuid);
         socketService = null;
         factoryService = null;
         uuid = null;
+
     }
 
     /**
