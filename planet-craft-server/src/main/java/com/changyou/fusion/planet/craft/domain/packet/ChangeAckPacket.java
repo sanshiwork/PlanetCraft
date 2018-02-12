@@ -9,8 +9,6 @@ import java.util.Arrays;
  */
 public class ChangeAckPacket {
 
-    private int id;
-
     private int faces[];
 
     private int color;
@@ -31,19 +29,10 @@ public class ChangeAckPacket {
         this.color = color;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
     @Override
     public String toString() {
         return "ChangeAckPacket{" +
-                "id=" + id +
-                ", face=" + Arrays.toString(faces) +
+                "faces=" + Arrays.toString(faces) +
                 ", color=" + color +
                 '}';
     }

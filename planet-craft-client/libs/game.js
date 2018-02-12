@@ -1,4 +1,5 @@
 var camera, scene, renderer, stats;
+var planet;
 var gui;
 var rayCaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -34,17 +35,10 @@ var ws = (function () {
             ws.send(JSON.stringify({id: 1, data: {}}));
         } else if (packet.id === 3) {
             // CHANGE_ACK Packet
-
-            var target = scene.children.filter(function (child) {
-                return child.id === packet.data.id;
+            packet.data.faces.forEach(function (face) {
+                planet.geometry.faces[face].color.set(packet.data.color);
             });
-            if (target.length > 0) {
-                packet.data.faces.forEach(function (face) {
-                    target[0].geometry.faces[face].color.set(packet.data.color);
-                });
-                target[0].geometry.colorsNeedUpdate = true;
-            }
-
+            planet.geometry.colorsNeedUpdate = true;
         }
 
     };
@@ -69,11 +63,22 @@ var controls = new function () {
     this.y = 10;
     this.x = 0;
     this.z = 0;
-    this.reset = function () {
-        this.y = 10;
+    this.rotateX = 0;
+    this.rotateY = 0;
+    this.rotateZ = 0;
+    this.resetCamera = function () {
         this.x = 0;
+        this.y = 10;
         this.z = 0;
         camera.position.set(controls.x, controls.y, controls.z);
+    };
+    this.resetPlanet = function () {
+        this.rotateX = 0;
+        this.rotateY = 0;
+        this.rotateZ = 0;
+        planet.rotation.x = 0;
+        planet.rotation.y = 0;
+        planet.rotation.z = 0;
     }
 };
 
@@ -82,7 +87,7 @@ function initGui() {
     var canvas = gui.addFolder("canvas");
     canvas.addColor(controls, 'color');
     canvas.add(controls, 'pencil', {square: '0', triangle: '1'});
-    var position = gui.addFolder("position");
+    var position = gui.addFolder("camera");
     position.add(controls, 'x', -8, 8).step(0.01).onChange(function (e) {
         camera.position.set(controls.x, controls.y, controls.z);
     });
@@ -92,9 +97,18 @@ function initGui() {
     position.add(controls, 'z', -4, 4).step(0.01).onChange(function (e) {
         camera.position.set(controls.x, controls.y, controls.z);
     });
-    position.add(controls, 'reset');
-
-
+    position.add(controls, 'resetCamera').name("reset");
+    var rotate = gui.addFolder("planet");
+    rotate.add(controls, 'rotateX', -Math.PI / 4, Math.PI / 4).step(0.01).onChange(function (e) {
+        planet.rotation.x = e;
+    });
+    rotate.add(controls, 'rotateY', -Math.PI / 4, Math.PI / 4).step(0.01).onChange(function (e) {
+        planet.rotation.y = e;
+    });
+    rotate.add(controls, 'rotateZ', -Math.PI / 4, Math.PI / 4).step(0.01).onChange(function (e) {
+        planet.rotation.z = e;
+    });
+    rotate.add(controls, 'resetPlanet').name("reset");
 }
 
 function init(data) {
@@ -127,7 +141,8 @@ function init(data) {
         // wireframe: true,
         // side: THREE.DoubleSide
     });
-    scene.add(new THREE.Mesh(geometry, material));
+    planet = new THREE.Mesh(geometry, material);
+    scene.add(planet);
 
     renderer = new THREE.WebGLRenderer();
     renderer.setClearColor(0x000020);
@@ -164,12 +179,11 @@ function onMouseDown(event) {
     rayCaster.setFromCamera(mouse, camera);
 
     var intersects = rayCaster.intersectObjects(scene.children);
-    if (intersects.length > 0) {
+    if (intersects.length > 0 && intersects[0].object.id === planet.id) {
         // CHANGE Packet
         ws.send(JSON.stringify({
             id: 2,
             data: {
-                id: intersects[0].object.id,
                 face: intersects[0].faceIndex,
                 color: controls.color,
                 pencil: controls.pencil

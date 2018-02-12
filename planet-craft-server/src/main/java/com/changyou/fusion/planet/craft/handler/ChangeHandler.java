@@ -48,7 +48,6 @@ public class ChangeHandler implements Handler {
         Packet ack = new Packet();
         ack.setId(Packet.CHANGE_ACK);
         ChangeAckPacket ackData = new ChangeAckPacket();
-        ackData.setId(packet.getId());
         ackData.setColor(packet.getColor());
         ackData.setFaces(faces);
         ack.setData(ackData);

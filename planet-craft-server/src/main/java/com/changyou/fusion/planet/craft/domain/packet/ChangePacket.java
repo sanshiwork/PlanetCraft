@@ -7,8 +7,6 @@ package com.changyou.fusion.planet.craft.domain.packet;
  */
 public class ChangePacket {
 
-    private int id;
-
     private int face;
 
     private int color;
@@ -39,19 +37,10 @@ public class ChangePacket {
         this.pencil = pencil;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
     @Override
     public String toString() {
         return "ChangePacket{" +
-                "id=" + id +
-                ", face=" + face +
+                "face=" + face +
                 ", color=" + color +
                 ", pencil=" + pencil +
                 '}';
