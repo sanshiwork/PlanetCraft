@@ -27,3 +27,6 @@ hs_err_pid*
 
 # LOG
 logs
+
+# profile
+application-tecent.properties

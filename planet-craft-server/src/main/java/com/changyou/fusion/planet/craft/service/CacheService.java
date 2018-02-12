@@ -10,10 +10,7 @@ public interface CacheService {
 
     enum PREFIX {
 
-        MESSAGE_COUNT("col:bbs:message:count:"),
-        TOKEN("col:bbs:token:"),
-        LIMIT_IP("col:bbs:limit:ip:"),
-        LIMIT_ACCOUNT("col:bbs:limit:account:");
+        PLANET("planet:craft:");
 
         PREFIX(String value) {
             this.value = value;

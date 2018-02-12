@@ -11,4 +11,9 @@ public interface TickService {
      * Tick.
      */
     public void tick();
+
+    /**
+     * save
+     */
+    public void save();
 }

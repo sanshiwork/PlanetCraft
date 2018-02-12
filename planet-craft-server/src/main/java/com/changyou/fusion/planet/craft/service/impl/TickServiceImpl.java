@@ -2,10 +2,12 @@ package com.changyou.fusion.planet.craft.service.impl;
 
 import com.changyou.fusion.planet.craft.domain.packet.Packet;
 import com.changyou.fusion.planet.craft.handler.Handler;
+import com.changyou.fusion.planet.craft.service.CacheService;
 import com.changyou.fusion.planet.craft.service.SceneService;
 import com.changyou.fusion.planet.craft.service.SocketService;
 import com.changyou.fusion.planet.craft.service.TickService;
 import com.changyou.fusion.planet.craft.socket.SessionStatus;
+import com.changyou.fusion.planet.craft.task.GameEventEngine;
 import com.changyou.fusion.planet.craft.util.ApplicationContextProvider;
 import com.changyou.fusion.planet.craft.util.JSON;
 import org.slf4j.Logger;
@@ -13,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * TickServiceImpl
@@ -31,7 +35,29 @@ public class TickServiceImpl implements TickService {
     private SocketService socketService;
 
     @Autowired
+    private CacheService cacheService;
+
+    @Autowired
     private SceneService sceneService;
+
+    /**
+     * 状态（0:保存结束,1:准备保存,2:正在保存）
+     */
+    private AtomicInteger save = new AtomicInteger(0);
+
+    private GameEventEngine engine = new GameEventEngine(BUFFER_SIZE, POOL_SIZE);
+
+    // 异步任务并发数
+    private static final int POOL_SIZE = 10;
+
+    // 环形队列大小数
+    private static final int BUFFER_SIZE = 1024;
+
+    @PostConstruct
+    public void init() {
+        engine = new GameEventEngine(BUFFER_SIZE, POOL_SIZE);
+        engine.start();
+    }
 
     @Override
     public void tick() {
@@ -46,9 +72,38 @@ public class TickServiceImpl implements TickService {
         // 处理所有输出
         tickOutputs(100);
 
-        // TODO 定时存库
+        // 异步任务
+        tickTask(10);
 
         time = System.currentTimeMillis();
+    }
+
+    /**
+     * save
+     */
+    @Override
+    public void save() {
+        if (save.get() == 0) {
+            save.set(1);
+        }
+    }
+
+    private void tickTask(int size) {
+        // 每个Tick处理10个异步回调
+        engine.callback(size);
+
+        // 场景存库
+        if (save.get() == 1) {
+            save.set(2);
+            engine.publish(params -> {
+                logger.info("DB Saving.");
+                cacheService.cache(CacheService.PREFIX.PLANET.getValue() + "array", (String) params[0]);
+                return null;
+            }, results -> {
+                save.set(0);
+                logger.info("DB Save finish.");
+            }, JSON.toJson(sceneService.getPlanetFaces()));
+        }
     }
 
     private void tickStatus() {
