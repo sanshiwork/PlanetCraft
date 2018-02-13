@@ -131,6 +131,15 @@ public class TickServiceImpl implements TickService {
                 String message = sessionWrapper.getInputs().poll();
                 if (message != null) {
                     Packet packet = JSON.fromJson(message, Packet.class);
+                    // 忽略心跳包
+                    if (packet.getId() < 0) {
+                        Packet heartbeat = new Packet();
+                        heartbeat.setId(Packet.HEARTBEAT);
+                        heartbeat.setData(null);
+                        sessionWrapper.getOutputs().add(JSON.toJson(heartbeat));
+                        continue;
+                    }
+
                     if (sessionWrapper.getStatus() == SessionStatus.WAITING && packet.getId() == Packet.INIT_ACK) {
                         ((Handler) ApplicationContextProvider.getBean(Handler.HANDLER_PREFIX + packet.getId())).handle(sessionWrapper, packet.getId(), packet.getData().toString());
                         break;

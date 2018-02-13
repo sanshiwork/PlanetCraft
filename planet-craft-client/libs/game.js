@@ -1,10 +1,13 @@
 // 调试开关
 var debug = false;
-var url = "ws://10.12.16.178:8080/planet/craft/socket";
+var url = "ws://10.12.16.178/planet/craft/socket";
+// var url = "ws://txpromoter.changyou.com/planet/craft/socket";
 // 游戏场景
 var camera, scene, renderer, planet;
 var rayCaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
+const clock = new THREE.Clock();
+var heartbeat = 0;
 // 帧率监控
 var stats;
 // UI
@@ -43,6 +46,9 @@ var ws = (function () {
                 planet.geometry.faces[face].color.set(packet.data.color);
             });
             planet.geometry.colorsNeedUpdate = true;
+        } else if (packet.id === -1) {
+            // Heartbeat Packet
+            console.log("heartbeat ack.")
         }
     };
 
@@ -200,6 +206,16 @@ function animate() {
 // 渲染
 function render() {
     renderer.render(scene, camera);
+    heartbeat += clock.getDelta();
+    // 发送心跳，防止断连（NGINX），间隔20秒
+    if (heartbeat >= 20) {
+        console.log("heartbeat.")
+        ws.send(JSON.stringify({
+            id: -1,
+            data: {}
+        }));
+        heartbeat = 0;
+    }
 }
 
 // 鼠标/触摸操作适配

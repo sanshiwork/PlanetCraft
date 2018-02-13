@@ -29,7 +29,6 @@ public class SceneServiceImpl implements SceneService {
 
     @PostConstruct
     public void init() throws IOException {
-        // 从redis中获取数据，如果没有，则使用模板初始化
         String planet = cacheService.get(CacheService.PREFIX.PLANET.getValue() + "array");
         if (planet == null || planet.isEmpty()) {
             Resource resource = new ClassPathResource("static/init.json");

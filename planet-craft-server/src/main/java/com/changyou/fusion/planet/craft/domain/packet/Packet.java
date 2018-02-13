@@ -7,6 +7,8 @@ package com.changyou.fusion.planet.craft.domain.packet;
  */
 public class Packet {
 
+    public static final int HEARTBEAT = -1;
+
     public static final int INIT = 0;
 
     public static final int INIT_ACK = 1;
