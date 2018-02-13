@@ -6,7 +6,7 @@ var mouse = new THREE.Vector2();
 
 var ws = (function () {
     // 连接服务器
-    var ws = new WebSocket("ws://localhost:8080/planet/craft/socket");
+    var ws = new WebSocket("ws://10.12.16.178:8080/planet/craft/socket");
 
     //连接发生错误的回调方法
     ws.onerror = function () {
@@ -60,7 +60,7 @@ var ws = (function () {
 var controls = new function () {
     this.color = 0x00FF00;
     this.pencil = '0';
-    this.y = 10;
+    this.y = 6;
     this.x = 0;
     this.z = 0;
     this.rotateX = 0;
@@ -68,7 +68,7 @@ var controls = new function () {
     this.rotateZ = 0;
     this.resetCamera = function () {
         this.x = 0;
-        this.y = 10;
+        this.y = 6;
         this.z = 0;
         camera.position.set(controls.x, controls.y, controls.z);
     };
@@ -88,14 +88,14 @@ function initGui() {
     canvas.addColor(controls, 'color');
     canvas.add(controls, 'pencil', {square: '0', triangle: '1'});
     var position = gui.addFolder("camera");
-    position.add(controls, 'x', -8, 8).step(0.01).onChange(function (e) {
-        camera.position.set(controls.x, controls.y, controls.z);
+    position.add(controls, 'x', -10, 10).step(0.01).onChange(function (e) {
+        camera.position.x = controls.x;
     });
-    position.add(controls, 'y', 2, 10).step(0.01).onChange(function (e) {
-        camera.position.set(controls.x, controls.y, controls.z);
+    position.add(controls, 'y', 0.5, 6).step(0.01).onChange(function (e) {
+        camera.position.y = controls.y;
     });
-    position.add(controls, 'z', -4, 4).step(0.01).onChange(function (e) {
-        camera.position.set(controls.x, controls.y, controls.z);
+    position.add(controls, 'z', -6, 6).step(0.01).onChange(function (e) {
+        camera.position.z = controls.z;
     });
     position.add(controls, 'resetCamera').name("reset");
     var rotate = gui.addFolder("planet");
@@ -113,7 +113,7 @@ function initGui() {
 
 function init(data) {
     // 相机
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+    camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, controls.y, 0);
     camera.lookAt(new THREE.Vector3(0, 0, 0));
 
@@ -202,4 +202,44 @@ function animate() {
 function render() {
     renderer.render(scene, camera);
 }
+
+// 鼠标/触摸操作适配
+var mc;
+(function (element) {
+    mc = new Hammer(element);
+    mc.add(new Hammer.Pan({direction: Hammer.DIRECTION_ALL, threshold: 0}));
+    mc.get('pinch').set({enable: true});
+    mc.on("pan", function (ev) {
+        var speed = camera.position.y * 0.1;
+        camera.position.x -= ev.velocityX * speed;
+        camera.position.z -= ev.velocityY * speed;
+        if (camera.position.x < -10) {
+            camera.position.x = -10;
+        }
+        if (camera.position.x > 10) {
+            camera.position.x = 10;
+        }
+        if (camera.position.z < -6) {
+            camera.position.z = -6;
+        }
+        if (camera.position.z > 6) {
+            camera.position.z = 6;
+        }
+    });
+    mc.on("pinch", function (ev) {
+        if (ev.scale > 1) {
+            camera.position.y -= ev.distance * 0.005;
+        } else if (ev.scale < 1) {
+            camera.position.y += ev.distance * 0.005;
+        }
+        if (camera.position.y < 0.5) {
+            camera.position.y = 0.5;
+        }
+        if (camera.position.y > 6) {
+            camera.position.y = 6;
+        }
+    });
+
+
+})(document.getElementById('container'));
 
