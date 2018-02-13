@@ -1,12 +1,18 @@
-var camera, scene, renderer, stats;
-var planet;
-var gui;
+// 调试开关
+var debug = false;
+var url = "ws://10.12.16.178:8080/planet/craft/socket";
+// 游戏场景
+var camera, scene, renderer, planet;
 var rayCaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
-
+// 帧率监控
+var stats;
+// UI
+var gui;
+// websocket
 var ws = (function () {
     // 连接服务器
-    var ws = new WebSocket("ws://10.12.16.178:8080/planet/craft/socket");
+    var ws = new WebSocket(url);
 
     //连接发生错误的回调方法
     ws.onerror = function () {
@@ -19,11 +25,9 @@ var ws = (function () {
 
     //接收到消息的回调方法
     ws.onmessage = function (event) {
-
         console.log(event);
 
         var packet = JSON.parse(event.data);
-
         // INTI Packet
         if (packet.id === 0) {
             // 初始化
@@ -40,7 +44,6 @@ var ws = (function () {
             });
             planet.geometry.colorsNeedUpdate = true;
         }
-
     };
 
     //连接关闭的回调方法
@@ -56,21 +59,18 @@ var ws = (function () {
     return ws;
 })();
 
-
+// GUI
 var controls = new function () {
-    this.color = 0x00FF00;
+    this.color = 0x2534a4;
     this.pencil = '0';
-    this.y = 6;
-    this.x = 0;
-    this.z = 0;
+    this.distance = 6;
     this.rotateX = 0;
     this.rotateY = 0;
     this.rotateZ = 0;
     this.resetCamera = function () {
-        this.x = 0;
-        this.y = 6;
-        this.z = 0;
-        camera.position.set(controls.x, controls.y, controls.z);
+        this.distance = 6;
+        camera.position.set(0, controls.distance, 0);
+        console.log(gui);
     };
     this.resetPlanet = function () {
         this.rotateX = 0;
@@ -86,16 +86,11 @@ function initGui() {
     gui = new dat.GUI();
     var canvas = gui.addFolder("canvas");
     canvas.addColor(controls, 'color');
+    canvas.add
     canvas.add(controls, 'pencil', {square: '0', triangle: '1'});
     var position = gui.addFolder("camera");
-    position.add(controls, 'x', -10, 10).step(0.01).onChange(function (e) {
-        camera.position.x = controls.x;
-    });
-    position.add(controls, 'y', 0.5, 6).step(0.01).onChange(function (e) {
-        camera.position.y = controls.y;
-    });
-    position.add(controls, 'z', -6, 6).step(0.01).onChange(function (e) {
-        camera.position.z = controls.z;
+    position.add(controls, 'distance', 0.5, 6).step(0.01).onChange(function (e) {
+        camera.position.y = controls.distance;
     });
     position.add(controls, 'resetCamera').name("reset");
     var rotate = gui.addFolder("planet");
@@ -111,17 +106,21 @@ function initGui() {
     rotate.add(controls, 'resetPlanet').name("reset");
 }
 
+// 初始化场景
 function init(data) {
     // 相机
     camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, controls.y, 0);
+    camera.position.set(0, controls.distance, 0);
     camera.lookAt(new THREE.Vector3(0, 0, 0));
 
     // 场景
     scene = new THREE.Scene();
 
     // 辅助线
-    // scene.add(new THREE.AxesHelper(20));
+    if (debug) {
+        scene.add(new THREE.AxesHelper(20));
+    }
+
 
     var light = new THREE.PointLight(0xffffff, 1);
     light.position.set(0, 50, 0);
@@ -152,22 +151,18 @@ function init(data) {
     var container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
-    stats = new Stats();
-    container.appendChild(stats.dom);
+    if (debug) {
+        stats = new Stats();
+        container.appendChild(stats.dom);
+    }
 
-    // 在容器上注册事件，这里container也可以换成document
-    container.addEventListener('click', onMouseDown, false);
+    // 屏幕大小变化
+    window.addEventListener('resize', function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
 
-    window.addEventListener('resize', onWindowResize, false);
-
-}
-
-function onWindowResize() {
-
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }, false);
 
 }
 
@@ -192,13 +187,17 @@ function onMouseDown(event) {
     }
 }
 
+// 逐帧渲染
 function animate() {
     requestAnimationFrame(animate);
-    stats.update();
+    if (debug) {
+        stats.update();
+    }
     render();
 
 }
 
+// 渲染
 function render() {
     renderer.render(scene, camera);
 }
@@ -209,6 +208,7 @@ var mc;
     mc = new Hammer(element);
     mc.add(new Hammer.Pan({direction: Hammer.DIRECTION_ALL, threshold: 0}));
     mc.get('pinch').set({enable: true});
+    // 拖动
     mc.on("pan", function (ev) {
         var speed = camera.position.y * 0.1;
         camera.position.x -= ev.velocityX * speed;
@@ -226,17 +226,41 @@ var mc;
             camera.position.z = 6;
         }
     });
+    // 缩放
     mc.on("pinch", function (ev) {
+        var speed = camera.position.y * 0.005;
         if (ev.scale > 1) {
-            camera.position.y -= ev.distance * 0.005;
+            camera.position.y -= ev.distance * speed;
         } else if (ev.scale < 1) {
-            camera.position.y += ev.distance * 0.005;
+            camera.position.y += ev.distance * speed;
         }
         if (camera.position.y < 0.5) {
             camera.position.y = 0.5;
         }
         if (camera.position.y > 6) {
             camera.position.y = 6;
+        }
+    });
+    // 触摸/点击
+    mc.on("tap", function (ev) {
+        var event = ev.srcEvent;
+        var x = event.clientX ? event.clientX : event.layerX;
+        var y = event.clientY ? event.clientY : event.layerY;
+        // 兼容触摸事件和点击事件
+        mouse.x = ( x / renderer.domElement.clientWidth ) * 2 - 1;
+        mouse.y = -( y / renderer.domElement.clientHeight ) * 2 + 1;
+        rayCaster.setFromCamera(mouse, camera);
+        var intersects = rayCaster.intersectObjects(scene.children);
+        if (intersects.length > 0 && intersects[0].object.id === planet.id) {
+            // CHANGE Packet
+            ws.send(JSON.stringify({
+                id: 2,
+                data: {
+                    face: intersects[0].faceIndex,
+                    color: controls.color,
+                    pencil: controls.pencil
+                }
+            }));
         }
     });
 

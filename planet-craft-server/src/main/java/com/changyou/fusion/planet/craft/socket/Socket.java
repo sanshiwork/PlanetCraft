@@ -71,6 +71,6 @@ public class Socket {
      */
     @OnError
     public void onError(Session session, Throwable throwable) {
-        logger.error(session.getId(), throwable);
+        // logger.error(session.getId(), throwable);
     }
 }
