@@ -12,6 +12,14 @@ var heartbeat = 0;
 var stats;
 // UI
 var gui;
+
+// 加载进度
+var spinner = (function () {
+    var spinner = new Spinner().spin();
+    document.getElementById('container').appendChild(spinner.el);
+    return spinner;
+})();
+
 // websocket
 var ws = (function () {
     // 连接服务器
@@ -92,10 +100,9 @@ function initGui() {
     gui = new dat.GUI();
     var canvas = gui.addFolder("canvas");
     canvas.addColor(controls, 'color');
-    canvas.add
     canvas.add(controls, 'pencil', {square: '0', triangle: '1'});
     var position = gui.addFolder("camera");
-    position.add(controls, 'distance', 0.5, 6).step(0.01).onChange(function (e) {
+    position.add(controls, 'distance', 0.5, 6).step(0.01).onChange(function () {
         camera.position.y = controls.distance;
     });
     position.add(controls, 'resetCamera').name("reset");
@@ -142,9 +149,7 @@ function init(data) {
     geometry.rotateX(-Math.PI / 2);
 
     var material = new THREE.MeshLambertMaterial({
-        vertexColors: THREE.FaceColors,
-        // wireframe: true,
-        // side: THREE.DoubleSide
+        vertexColors: THREE.FaceColors
     });
     planet = new THREE.Mesh(geometry, material);
     scene.add(planet);
@@ -170,27 +175,8 @@ function init(data) {
         renderer.setSize(window.innerWidth, window.innerHeight);
     }, false);
 
-}
-
-function onMouseDown(event) {
-
-    mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
-    mouse.y = -( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
-
-    rayCaster.setFromCamera(mouse, camera);
-
-    var intersects = rayCaster.intersectObjects(scene.children);
-    if (intersects.length > 0 && intersects[0].object.id === planet.id) {
-        // CHANGE Packet
-        ws.send(JSON.stringify({
-            id: 2,
-            data: {
-                face: intersects[0].faceIndex,
-                color: controls.color,
-                pencil: controls.pencil
-            }
-        }));
-    }
+    // 加载完成
+    spinner.spin();
 }
 
 // 逐帧渲染
@@ -209,7 +195,7 @@ function render() {
     heartbeat += clock.getDelta();
     // 发送心跳，防止断连（NGINX），间隔20秒
     if (heartbeat >= 20) {
-        console.log("heartbeat.")
+        console.log("heartbeat.");
         ws.send(JSON.stringify({
             id: -1,
             data: {}
